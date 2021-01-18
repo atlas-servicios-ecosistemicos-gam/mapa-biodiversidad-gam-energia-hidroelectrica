@@ -1,0 +1,96 @@
+---
+title: "Mapa de energía hidroeléctrica en la Gran Área Metropolitana"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+#-------------------- Paquetes --------------------
+
+library(flexdashboard)
+library(dplyr)
+library(sf)
+library(leaflet)
+library(leafem)
+library(esri2sf)
+
+#--------------- URL de geoservicios --------------
+
+url_agfs_limite_gam <-
+  "https://services9.arcgis.com/RrvMEynxDB8hycVO/arcgis/rest/services/gam_limite_gam/FeatureServer/0"
+
+url_embalses_gam <-
+  "https://raw.githubusercontent.com/atlas-servicios-ecosistemicos-gam/datos-servicios-ecosistemicos/main/gam/embalses_gam.geojson"
+
+#--------------- Objetos sf ---------------
+
+# Límite de la GAM
+sf_limite_gam <-
+  esri2sf(url_agfs_limite_gam)
+
+# Límite de la GAM (reproyectado a Web Mercator)
+sf_limite_gam_web <- 
+  sf_limite_gam %>%
+  st_transform(3857)
+
+# Embalses
+sf_embalses_gam <- 
+  st_read(url_embalses_gam) %>%
+  st_zm()
+
+```
+
+Row {data-height=10}
+-----------------------------------------------------------------------
+### **Servicio ecosistémico de aprovisionamiento**
+
+
+Row
+-----------------------------------------------------------------------
+
+### 
+
+```{r}
+
+leaflet() %>%
+  addProviderTiles(providers$Stamen.TonerLite, group = "Stamen Toner Lite") %>%  
+  addProviderTiles(providers$OpenStreetMap.Mapnik, group = "OpenStreetMap") %>%
+  addProviderTiles(providers$CartoDB.DarkMatter, group = "CartoDB Dark Matter") %>%  
+  addProviderTiles(providers$Esri.WorldImagery, group = "Imágenes de ESRI") %>%
+  addPolygons(
+    data = sf_limite_gam,
+    color = "Purple",
+    fillColor = "transparent",
+    stroke = TRUE,
+    weight = 6.0,
+    group = "Límite de la GAM"
+  ) %>%
+  addPolygons(
+    data = sf_embalses_gam,
+    color = "Blue",
+    fillColor = "transparent",
+    stroke = TRUE,
+    weight = 4.0,
+    popup = paste(sf_embalses_gam$nom_hum),
+    label = ~sf_embalses_gam$nom_hum,
+    group = "Embalses"
+  ) %>%    
+  addLayersControl(
+    baseGroups = c("Stamen Toner Lite", "OpenStreetMap", "CartoDB Dark Matter", "Imágenes de ESRI"),
+    overlayGroups = c("Límite de la GAM", "Embalses"),
+    options = layersControlOptions(collapsed = TRUE)    
+  ) %>%  
+  addMiniMap(
+    toggleDisplay = TRUE,
+    position = "bottomleft",
+    tiles = providers$Stamen.TonerLite
+  ) %>%
+  addScaleBar(
+    position = "bottomleft",
+    options = scaleBarOptions(imperial = FALSE)
+  ) %>%
+  addMouseCoordinates()
+
+```
